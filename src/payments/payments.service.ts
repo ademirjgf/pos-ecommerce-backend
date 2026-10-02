@@ -136,7 +136,7 @@ export class PaymentsService {
       'MOCKPAY_SECRET_KEY',
     );
 
-    let response: Response;
+       let response: Response;
 
     try {
       response = await fetch(`${baseUrl}/api/v1/payments`, {
@@ -152,11 +152,23 @@ export class PaymentsService {
             order_id: String(orderId),
           },
         }),
-        signal: AbortSignal.timeout(60000),
+        signal: AbortSignal.timeout(90000),
       });
-    } catch {
+    } catch (error: unknown) {
+      const detail =
+        error instanceof Error
+          ? error.message
+          : String(error);
+
+      const cause =
+        error instanceof Error && error.cause instanceof Error
+          ? error.cause.message
+          : 'Sin detalle adicional';
+
+      console.error('[MockPay/createCheckout]', detail, cause);
+
       throw new BadGatewayException(
-        'No se pudo contactar con MockPay. El intento local requiere conciliación.',
+        'No se pudo contactar con MockPay. El intento local requiere conciliacion.',
       );
     }
 
