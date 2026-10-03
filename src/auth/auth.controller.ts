@@ -12,8 +12,6 @@ import { AuthService } from './auth.service.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
-import { RolesGuard } from './guards/roles.guard.js';
-import { Roles } from './decorators/roles.decorator.js';
 
 @Controller('auth')
 export class AuthController {
@@ -44,16 +42,5 @@ export class AuthController {
     },
   ) {
     return request.user;
-  }
-
-  // NUEVO ENDPOINT: prueba de autorizaciÃ³n ADMIN
-  @ApiBearerAuth('access-token')
-  @Get('admin-check')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  checkAdmin() {
-    return {
-      message: 'Acceso administrativo autorizado',
-    };
   }
 }
