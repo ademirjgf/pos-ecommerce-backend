@@ -1,0 +1,173 @@
+// POS & Ecommerce | DER físico basado en prisma/schema.prisma (main)
+// PK = primary key; UQ = unique; FK = foreign key; NULL = opcional
+
+Table users {
+  id int [pk, increment]
+  email varchar(255) [unique, not null]
+  password_hash varchar(255) [not null]
+  role varchar(40) [not null, note: 'enum Role']
+  active boolean [not null]
+  created_at timestamptz(3) [not null]
+}
+
+Table customers {
+  id int [pk, increment]
+  user_id integer [unique, note: 'FK']
+  first_name varchar(100) [not null]
+  last_name varchar(100) [not null]
+  phone varchar(20) [not null]
+  created_at timestamptz(3) [not null]
+}
+
+Table addresses {
+  id int [pk, increment]
+  customer_id integer [not null, note: 'FK']
+  recipient_name varchar(150) [not null]
+  recipient_phone varchar(20) [not null]
+  address_line text [not null]
+  district varchar(100) [not null]
+  city varchar(100) [not null]
+  reference text
+  is_default boolean [not null]
+  created_at timestamptz(3) [not null]
+}
+
+Table categories {
+  id int [pk, increment]
+  name varchar(100) [unique, not null]
+  description text
+}
+
+Table products {
+  id int [pk, increment]
+  category_id integer [not null, note: 'FK']
+  sku varchar(50) [unique, not null]
+  name varchar(150) [not null]
+  description text
+  cost_price decimal(12,2) [not null]
+  sale_price decimal(12,2) [not null]
+  active boolean [not null]
+  created_at timestamptz(3) [not null]
+  updated_at timestamptz(3) [not null]
+}
+
+Table inventory {
+  id int [pk, increment]
+  product_id integer [unique, not null, note: 'FK']
+  stock integer [not null]
+  reserved_stock integer [not null]
+  updated_at timestamptz(3) [not null]
+}
+
+Table cash_sessions {
+  id int [pk, increment]
+  cashier_id integer [not null, note: 'FK']
+  opening_amount decimal(12,2) [not null]
+  opened_at timestamptz(3) [not null]
+  closed_at timestamptz(3)
+  status varchar(40) [not null, note: 'enum CashSessionStatus']
+  expected_amount decimal(12,2)
+  counted_amount decimal(12,2)
+  difference decimal(12,2)
+}
+
+Table pos_sales {
+  id int [pk, increment]
+  cash_session_id integer [not null, note: 'FK']
+  cashier_id integer [not null, note: 'FK']
+  status varchar(40) [not null, note: 'enum PosSaleStatus']
+  payment_method varchar(40) [note: 'enum PaymentMethod']
+  total decimal(12,2) [not null]
+  created_at timestamptz(3) [not null]
+  paid_at timestamptz(3)
+}
+
+Table pos_sale_items {
+  id int [pk, increment]
+  sale_id integer [not null, note: 'FK']
+  product_id integer [not null, note: 'FK']
+  quantity integer [not null]
+  unit_price decimal(12,2) [not null]
+  unit_cost decimal(12,2) [not null]
+  indexes { (sale_id, product_id) [unique] }
+}
+
+Table carts {
+  id int [pk, increment]
+  customer_id integer [not null, note: 'FK']
+  status varchar(40) [not null, note: 'enum CartStatus']
+  created_at timestamptz(3) [not null]
+  updated_at timestamptz(3) [not null]
+  indexes { (customer_id, status) }
+}
+
+Table cart_items {
+  id int [pk, increment]
+  cart_id integer [not null, note: 'FK']
+  product_id integer [not null, note: 'FK']
+  quantity integer [not null]
+  indexes { (cart_id, product_id) [unique] }
+}
+
+Table orders {
+  id int [pk, increment]
+  customer_id integer [not null, note: 'FK']
+  source varchar(40) [not null, note: 'enum OrderSource']
+  status varchar(40) [not null, note: 'enum OrderStatus']
+  total decimal(12,2) [not null]
+  currency varchar(3) [not null]
+  recipient_name varchar(150) [not null]
+  recipient_phone varchar(20) [not null]
+  shipping_address text [not null]
+  district varchar(100) [not null]
+  city varchar(100) [not null]
+  reference text
+  reservation_status varchar(40) [not null, note: 'enum ReservationStatus']
+  reservation_expires_at timestamptz(3)
+  created_at timestamptz(3) [not null]
+  updated_at timestamptz(3) [not null]
+  indexes { (customer_id, status) }
+}
+
+Table order_items {
+  id int [pk, increment]
+  order_id integer [not null, note: 'FK']
+  product_id integer [not null, note: 'FK']
+  quantity integer [not null]
+  unit_price decimal(12,2) [not null]
+  unit_cost decimal(12,2) [not null]
+  indexes { (order_id, product_id) [unique] }
+}
+
+Table payments {
+  id int [pk, increment]
+  order_id integer [not null, note: 'FK']
+  provider varchar(40) [not null, note: 'enum PaymentProvider']
+  provider_payment_id varchar(100) [unique]
+  idempotency_key varchar(100) [unique, not null]
+  amount decimal(12,2) [not null]
+  currency varchar(3) [not null]
+  status varchar(40) [not null, note: 'enum PaymentStatus']
+  checkout_url text
+  created_at timestamptz(3) [not null]
+  confirmed_at timestamptz(3)
+  indexes { (order_id, status) }
+}
+
+// Relaciones: - denota 1 a 0..1; > denota muchos a uno
+Ref: customers.user_id - users.id
+Ref: addresses.customer_id > customers.id
+Ref: products.category_id > categories.id
+Ref: inventory.product_id - products.id
+Ref: cash_sessions.cashier_id > users.id
+Ref: pos_sales.cash_session_id > cash_sessions.id
+Ref: pos_sales.cashier_id > users.id
+Ref: pos_sale_items.sale_id > pos_sales.id
+Ref: pos_sale_items.product_id > products.id
+Ref: carts.customer_id > customers.id
+Ref: cart_items.cart_id > carts.id
+Ref: cart_items.product_id > products.id
+Ref: orders.customer_id > customers.id
+Ref: order_items.order_id > orders.id
+Ref: order_items.product_id > products.id
+Ref: payments.order_id > orders.id
