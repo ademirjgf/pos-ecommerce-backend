@@ -1,3 +1,4 @@
+
 import {
   ConflictException,
   Injectable,
@@ -9,6 +10,7 @@ import bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
+import { CreateStaffDto } from './dto/create-staff.dto.js';
 
 @Injectable()
 export class AuthService {
@@ -84,5 +86,35 @@ export class AuthService {
       accessToken,
       tokenType: 'Bearer',
     };
+  }
+
+  async createStaff(dto: CreateStaffDto) {
+    const email = dto.email.trim().toLowerCase();
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('El correo ya está registrado');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 12);
+
+    return this.prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        role: 'CASHIER',
+        active: true,
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        active: true,
+        createdAt: true,
+      },
+    });
   }
 }

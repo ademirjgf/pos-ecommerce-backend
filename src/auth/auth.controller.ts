@@ -1,4 +1,5 @@
-﻿import { ApiBearerAuth } from '@nestjs/swagger';
+﻿
+import { ApiBearerAuth } from '@nestjs/swagger';
 import {
   Body,
   Controller,
@@ -11,7 +12,10 @@ import {
 import { AuthService } from './auth.service.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
+import { CreateStaffDto } from './dto/create-staff.dto.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
+import { RolesGuard } from './guards/roles.guard.js';
+import { Roles } from './decorators/roles.decorator.js';
 
 @Controller('auth')
 export class AuthController {
@@ -42,5 +46,13 @@ export class AuthController {
     },
   ) {
     return request.user;
+  }
+
+  @ApiBearerAuth('access-token')
+  @Post('staff')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  createStaff(@Body() dto: CreateStaffDto) {
+    return this.authService.createStaff(dto);
   }
 }
