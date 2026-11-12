@@ -1,3 +1,4 @@
+
 import {
   BadRequestException,
   ConflictException,
@@ -278,6 +279,42 @@ export class PosSalesService {
           status: 'CANCELLED',
         },
       });
+    });
+  }
+
+  // 7. Historial de ventas pagadas por fecha
+  async findHistory(cashierId: number, date: string) {
+    const inicio = new Date(`${date}T00:00:00-05:00`);
+
+    const fin = new Date(
+      inicio.getTime() + 24 * 60 * 60 * 1000,
+    );
+
+    return this.prisma.posSale.findMany({
+      where: {
+        cashierId,
+        status: 'PAID',
+        paidAt: {
+          gte: inicio,
+          lt: fin,
+        },
+      },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        paidAt: 'desc',
+      },
     });
   }
 }
