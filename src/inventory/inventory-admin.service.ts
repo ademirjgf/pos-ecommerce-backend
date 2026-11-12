@@ -1,3 +1,4 @@
+
 import {
   Injectable,
   NotFoundException,
@@ -17,8 +18,10 @@ export class InventoryAdminService {
     const products = await this.prisma.product.findMany({
       select: {
         id: true,
+        categoryId: true,
         sku: true,
         name: true,
+        description: true,
         active: true,
         costPrice: true,
         salePrice: true,
