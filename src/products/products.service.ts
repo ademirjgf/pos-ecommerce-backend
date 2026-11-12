@@ -1,10 +1,14 @@
+
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '../generated/prisma/client.js';
 
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
+import { UpdateProductDto } from './dto/update-product.dto.js';
 
 @Injectable()
 export class ProductsService {
@@ -12,7 +16,7 @@ export class ProductsService {
     private readonly prisma: PrismaService,
   ) {}
 
-  // Catálogo público: productos con disponibilidad.
+  // Catálogo público: solamente productos disponibles.
   async findAll() {
     const products = await this.prisma.product.findMany({
       where: {
@@ -96,5 +100,76 @@ export class ProductsService {
         inventory: true,
       },
     });
+  }
+
+  // Actualizar producto sin modificar su inventario.
+  async update(id: number, dto: UpdateProductDto) {
+    const producto = await this.prisma.product.findUnique({
+      where: { id },
+    });
+
+    if (!producto) {
+      throw new NotFoundException('Producto no encontrado');
+    }
+
+    if (dto.categoryId !== undefined) {
+      const categoria = await this.prisma.category.findUnique({
+        where: { id: dto.categoryId },
+      });
+
+      if (!categoria) {
+        throw new NotFoundException('Categoría no encontrada');
+      }
+    }
+
+    const datos: Prisma.ProductUpdateInput = {};
+
+    if (dto.sku !== undefined) {
+      datos.sku = dto.sku.trim().toUpperCase();
+    }
+
+    if (dto.name !== undefined) {
+      datos.name = dto.name.trim();
+    }
+
+    if (dto.description !== undefined) {
+      datos.description = dto.description.trim();
+    }
+
+    if (dto.costPrice !== undefined) {
+      datos.costPrice = dto.costPrice;
+    }
+
+    if (dto.salePrice !== undefined) {
+      datos.salePrice = dto.salePrice;
+    }
+
+    if (dto.categoryId !== undefined) {
+      datos.category = {
+        connect: { id: dto.categoryId },
+      };
+    }
+
+    try {
+      return await this.prisma.product.update({
+        where: { id },
+        data: datos,
+        include: {
+          category: true,
+          inventory: true,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'El SKU ya está registrado',
+        );
+      }
+
+      throw error;
+    }
   }
 }
